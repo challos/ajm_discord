@@ -56,6 +56,7 @@ class Base_Bot(commands.Cog):
         if self.to_be_deleted(message):
             await ctx.delete()
             await message.delete()
+            print("Deleted message by {}'s request.".format(ctx.author.display_name))
 
         else:
             await ctx.respond("Sorry, this message can't be deleted.")
