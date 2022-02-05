@@ -46,6 +46,7 @@ class Delete_Cog(Base_Cog):
         description="Deletes all messages from this bot in a thread.",
     )
     async def purge_thread(self, ctx: discord.ApplicationContext):
+        await ctx.defer()
         channel = self.bot.get_channel(ctx.channel_id)
         if (
             channel.type != discord.ChannelType.public_thread
@@ -67,6 +68,7 @@ class Delete_Cog(Base_Cog):
     async def delete_message(
         self, ctx: discord.ApplicationContext, message: discord.Message
     ):
+        await ctx.defer()
         if self.to_be_deleted(message):
             await ctx.delete()
             await message.delete()
