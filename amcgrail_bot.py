@@ -6,6 +6,7 @@ from discord.commands import Option
 class Base_Cog(commands.Cog):
     """
     Intentionally sparse base class.
+
     Attributes
     ----------
     bot : commands.bot
@@ -185,6 +186,124 @@ class Delete_Cog(Base_Cog):
                     ctx.author.display_name
                 ),
             )
+
+
+class Text_Cog(Base_Cog):
+    def __init__(self, bot: commands.bot):
+        self.bot = bot
+
+    async def text_from_text_attachments(self, msg: discord.Message) -> str:
+        """
+        Retrieves the text from text attachments on a given discord message.
+
+        Parameters
+        ----------
+        msg : discord.Message
+            The message to retrieve text from attachments from.
+
+        Returns
+        -------
+        str
+            The text from attachments.
+        """
+        return_str = ""
+        for attachment in msg.attachments:
+            # checks MIME type
+            if "text/plain" in attachment.content_type:
+                raw = await attachment.read()
+                return_str = raw.decode()
+
+        return return_str
+
+    async def get_good_text(self, thread: discord.Thread) -> str:
+        """
+        Retrieves 'good' text from a thread. Which includes text from text attachments, google docs, and regular message text from discord.
+
+        Parameters
+        ----------
+        thread : discord.Thread
+            The thread to retieve good text from.
+
+        Returns
+        -------
+        str
+            All the text from the thread.
+        """
+        if (
+            thread.type != discord.ChannelType.public_thread
+            and thread.type != discord.ChannelType.private_thread
+        ):
+            await thread.send("Error, this must be done in a thread.")
+            return ""
+
+        full_history = ""
+        async for message in thread.history(limit=None, oldest_first=True):
+            # don't retrieve own messages or messages marked not to be taken
+            if not message.author.bot:
+                # in case there's text files to read from
+                attachment_text = await self.text_from_text_attachments(message)
+                # or a drive file to read from
+                drive_doc_text = ""
+
+                if not attachment_text:
+                    check = re.findall(
+                        r"(https?://docs.google.com/document/d/[^\s]+)", message.content
+                    )
+                    for link in check:
+                        drive_doc_text += self.drive_doc_to_raw_text(link)
+                        # means that there was a drive doc with nothing in it
+                        if drive_doc_text == "":
+                            await thread.send(
+                                "Permissions on drive link denied, please check your sharing settings. Could also be an empty drive document."
+                            )
+                            return ""
+
+                # means it wasn't just an attachment or a drive link
+                if not drive_doc_text and not drive_doc_text:
+                    full_history += message.content + "\n"
+
+                full_history += attachment_text + drive_doc_text
+
+        return full_history
+
+    def drive_doc_to_raw_text(self, drive_doc_link: str) -> str:
+        """
+        Converts a drive link to raw text from the drive document and returns it.
+
+        Parameters
+        ----------
+        drive_doc_link : str
+            The link to the google drive document.
+
+        Returns
+        -------
+        str
+            The raw text of the google drive document.
+        """
+        doc_pattern = re.compile(r"/document/d/([^/\n]*)")
+        key = doc_pattern.findall(drive_doc_link)
+        if len(key) != 1:
+            return ""
+
+        else:
+            key = key[0]
+
+        drive_link = "https://docs.google.com/document/d/{}/export?format=txt".format(
+            key
+        )
+
+        local_filename, headers = urllib.request.urlretrieve(drive_link)
+
+        # check whether or not it's actually been downloaded
+        if headers["X-Frame-Options"] == "DENY":
+            return ""
+
+        text = ""
+        with open(local_filename, "r") as fp:
+            for line in fp:
+                text += line
+
+        return text
 
 
 class Amcgrail_Cog(Listener_Cog, Delete_Cog):
