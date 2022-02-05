@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord.commands import Option
 
 
-class Base_Cog(commands.cog):
+class Base_Cog(commands.Cog):
     def __init__(self, bot: commands.bot):
         self.bot = bot
 
