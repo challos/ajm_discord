@@ -31,15 +31,15 @@ class Listener_Cog(Base_Cog):
     async def on_command_error(self, ctx: discord.ApplicationContext, error):
         self.log_resp(ctx, "THERE WAS AN ERROR: {}".format(error))
 
-    def to_be_deleted(self, msg: discord.Message) -> bool:
-        """Just a helper function to decide if a message was sent by this bot."""
-        # delete anything done by the bot
-        return msg.author.id == self.bot.user.id
-
 
 class Delete_Cog(Base_Cog):
     def __init__(self, bot: commands.bot):
         self.bot = bot
+
+    def to_be_deleted(self, msg: discord.Message) -> bool:
+        """Just a helper function to decide if a message was sent by this bot."""
+        # delete anything done by the bot
+        return msg.author.id == self.bot.user.id
 
     @commands.slash_command(
         name="purge_thread",
@@ -79,6 +79,7 @@ class Delete_Cog(Base_Cog):
                     ctx.author.display_name
                 ),
             )
+
 
 class Amcgrail_Cog(Listener_Cog, Delete_Cog):
     def __init__(self, bot: commands.bot):
