@@ -1,4 +1,6 @@
 import discord
+import re
+import urllib
 from discord.ext import commands
 from discord.commands import Option
 
