@@ -121,7 +121,9 @@ class Delete_Cog(Base_Cog):
         """
         self.bot = bot
 
-    def to_be_deleted(self, msg: discord.Message) -> bool:
+    def to_be_deleted(
+        self, msg: discord.Message, ignore_reactions: bool = True
+    ) -> bool:
         """
         Just a helper function to decide if a message was sent by this bot.
 
@@ -135,8 +137,22 @@ class Delete_Cog(Base_Cog):
         True if the message should be deleted, False otherwise.
 
         """
-        # delete anything done by the bot
+        if ignore_reactions:
+            # delete anything done by the bot,
+            return msg.author.id == self.bot.user.id
+
+        for reaction in msg.reactions:
+            # supposed to be a white check mark
+            if reaction.emoji == "✅":
+                return False
+
         return msg.author.id == self.bot.user.id
+
+    # could probably be replaced with a lambda
+    def to_be_deleted_alt(
+        self, msg: discord.Message, ignore_reactions: bool = False
+    ) -> bool:
+        return self.to_be_deleted(msg, False)
 
     @commands.slash_command(
         name="purge_thread",
@@ -151,13 +167,13 @@ class Delete_Cog(Base_Cog):
         ):
             await self.log_resp(
                 self,
-                "Sorry {}, this can only be done in a private thread.".format(
+                "Sorry {}, this can only be done in a thread.".format(
                     ctx.author.display_name
                 ),
             )
             return
 
-        await ctx.channel.purge(limit=1000, check=self.to_be_deleted)
+        await ctx.channel.purge(limit=1000, check=self.to_be_deleted_alt)
 
     @commands.message_command(
         name="Delete Message", description="Deletes the selected message."
@@ -194,7 +210,8 @@ class Text_Cog(Base_Cog):
     def __init__(self, bot: commands.bot):
         self.bot = bot
 
-    async def text_from_text_attachments(self, msg: discord.Message) -> str:
+    @staticmethod
+    async def text_from_text_attachments(msg: discord.Message) -> str:
         """
         Retrieves the text from text attachments on a given discord message.
 
@@ -217,7 +234,8 @@ class Text_Cog(Base_Cog):
 
         return return_str
 
-    async def get_good_text(self, thread: discord.Thread) -> str:
+    @staticmethod
+    async def get_good_text(thread: discord.Thread, bot_okay: bool = False) -> str:
         """
         Retrieves 'good' text from a thread. Which includes text from text attachments, google docs, and regular message text from discord.
 
@@ -241,9 +259,9 @@ class Text_Cog(Base_Cog):
         full_history = ""
         async for message in thread.history(limit=None, oldest_first=True):
             # don't retrieve own messages or messages marked not to be taken
-            if not message.author.bot:
+            if not message.author.bot or bot_okay:
                 # in case there's text files to read from
-                attachment_text = await self.text_from_text_attachments(message)
+                attachment_text = await Text_Cog.text_from_text_attachments(message)
                 # or a drive file to read from
                 drive_doc_text = ""
 
@@ -252,7 +270,7 @@ class Text_Cog(Base_Cog):
                         r"(https?://docs.google.com/document/d/[^\s]+)", message.content
                     )
                     for link in check:
-                        drive_doc_text += self.drive_doc_to_raw_text(link)
+                        drive_doc_text += Text_Cog.drive_doc_to_raw_text(link)
                         # means that there was a drive doc with nothing in it
                         if drive_doc_text == "":
                             await thread.send(
@@ -261,14 +279,41 @@ class Text_Cog(Base_Cog):
                             return ""
 
                 # means it wasn't just an attachment or a drive link
-                if not drive_doc_text and not drive_doc_text:
+                if not drive_doc_text and not attachment_text:
                     full_history += message.content + "\n"
 
                 full_history += attachment_text + drive_doc_text
 
         return full_history
 
-    def drive_doc_to_raw_text(self, drive_doc_link: str) -> str:
+    @staticmethod
+    async def get_embed_text(
+        thread: discord.Thread, split_field: bool = True, bot_okay: bool = True
+    ) -> str:
+        if (
+            thread.type != discord.ChannelType.public_thread
+            and thread.type != discord.ChannelType.private_thread
+        ):
+            await thread.send("Error, this must be done in a thread.")
+            return ""
+        name_text = ""
+        value_text = ""
+        combined_text = ""
+        async for message in thread.history(limit):
+            if not message.author.bot or bot_okay:
+                for embed in message.embeds:
+                    for field in embed.fields:
+                        name_text += field.name
+                        value_text += field.value
+                        combined_text += field.name + field.value
+
+        if split_field:
+            return (name_text, value_text)
+
+        return combined_text
+
+    @staticmethod
+    def drive_doc_to_raw_text(drive_doc_link: str) -> str:
         """
         Converts a drive link to raw text from the drive document and returns it.
 
