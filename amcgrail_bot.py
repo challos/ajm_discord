@@ -110,6 +110,9 @@ class Delete_Cog(Base_Cog):
         A method for checking if a message should or should not be deleted.
     purge_thread : None
         Removes messages from a given thread.
+    delete_message(ctx, message) : None
+        Deletes a message based on a message command.
+
 
     """
 
@@ -159,6 +162,14 @@ class Delete_Cog(Base_Cog):
         description="Deletes all messages from this bot in a thread.",
     )
     async def purge_thread(self, ctx: discord.ApplicationContext):
+        """
+        Removes messages from a thread based on to_be_deleted.
+
+        Parameters
+        ----------
+        ctx : discord.ApplicationContext
+            The context the slash command was used in.
+        """
         await ctx.defer()
         channel = self.bot.get_channel(ctx.channel_id)
         if (
@@ -207,6 +218,27 @@ class Delete_Cog(Base_Cog):
 
 
 class Text_Cog(Base_Cog):
+    """
+    Cog for processing text.
+
+    Attributes
+    ----------
+    bot: commands.bot
+        The bot this cog will be used in.
+
+    Methods
+    -------
+    text_from_text_attachments(msg) : str
+        Returns a string based on the text attachments in a message.
+    get_good_text(thread, bot_okay) : str
+        Retrieves 'good' text from a thread.
+    get_embed_text(thread, split_field = True, bot_okay = True) : str/tuple
+        Retrieves the text from embeds.
+    drive_doc_to_raw_text(drive_doc_link) : str
+        Converts a google docs link to raw text.
+
+    """
+
     def __init__(self, bot: commands.bot):
         self.bot = bot
 
@@ -289,7 +321,24 @@ class Text_Cog(Base_Cog):
     @staticmethod
     async def get_embed_text(
         thread: discord.Thread, split_field: bool = True, bot_okay: bool = True
-    ) -> str:
+    ):
+        """
+        Retrieves embed text from a thread.
+
+        Parameters
+        ----------
+        thread : discord.Thread
+            The thread to retrieve embed text from.
+        split_field : bool
+            Whether or not the embed text should be split into (field names, field values) upon return
+        bot_okay : bool
+            Whether or not it's okay to retrieve embed text from bots.
+
+        Returns
+        -------
+        str/tuple
+            Returns either a string or a tuple depending on whether or nor split_field is True
+        """
         if (
             thread.type != discord.ChannelType.public_thread
             and thread.type != discord.ChannelType.private_thread
@@ -299,7 +348,7 @@ class Text_Cog(Base_Cog):
         name_text = ""
         value_text = ""
         combined_text = ""
-        async for message in thread.history(limit):
+        async for message in thread.history(limit=1000):
             if not message.author.bot or bot_okay:
                 for embed in message.embeds:
                     for field in embed.fields:
