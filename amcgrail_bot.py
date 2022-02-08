@@ -1,6 +1,7 @@
 import discord
 import re
 import urllib
+from typing import Union
 from discord.ext import commands
 from discord.commands import Option
 
@@ -30,7 +31,7 @@ class Base_Cog(commands.Cog):
 
     async def log_resp(
         self,
-        ctx: discord.ApplicationContext,
+        ctx: Union[discord.Interaction, discord.ApplicationContext],
         string: str,
         **kwargs,
     ) -> discord.Interaction:
@@ -47,8 +48,12 @@ class Base_Cog(commands.Cog):
         discord.Interaction
             Returns the Interaction object from sending the response.
         """
-        print(string)
-        return await ctx.respond(string, **kwargs)
+        if isinstance(ctx, discord.ApplicationContext):
+            print(string)
+            return await ctx.respond(content=string, **kwargs)
+        if isinstance(ctx, discord.Interaction):
+            print(string)
+            return await ctx.channel.send(content=string, **kwargs)
 
 
 class Listener_Cog(Base_Cog):
@@ -161,7 +166,7 @@ class Delete_Cog(Base_Cog):
         name="purge_thread",
         description="Deletes all messages from this bot in a thread.",
     )
-    async def purge_thread(self, ctx: discord.ApplicationContext):
+    async def purge_thread(self, ctx: Union[discord.ApplicationContext, discord.Interaction]):
         """
         Removes messages from a thread based on to_be_deleted.
 
@@ -170,7 +175,8 @@ class Delete_Cog(Base_Cog):
         ctx : discord.ApplicationContext
             The context the slash command was used in.
         """
-        await ctx.defer()
+        if isinstance(ctx, discord.ApplicationContext):
+            await ctx.defer()
         channel = self.bot.get_channel(ctx.channel_id)
         if (
             channel.type != discord.ChannelType.public_thread
