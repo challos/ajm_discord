@@ -1,4 +1,5 @@
 import discord
+from typing import Union
 from discord.ext import commands
 from discord.commands import Option
 import re
@@ -30,7 +31,7 @@ class BaseCog(commands.Cog):
 
     async def log_resp(
         self,
-        ctx: discord.ApplicationContext,
+        ctx: Union[discord.Interaction, discord.ApplicationContext],
         string: str,
         **kwargs,
     ) -> discord.Interaction:
@@ -47,8 +48,12 @@ class BaseCog(commands.Cog):
         discord.Interaction
             Returns the Interaction object from sending the response.
         """
-        print(string)
-        return await ctx.respond(string, **kwargs)
+        if isinstance(ctx, discord.ApplicationContext):
+            print(string)
+            return await ctx.respond(content=string, **kwargs)
+        if isinstance(ctx, discord.Interaction):
+            print(string)
+            return await ctx.channel.send(content=string, **kwargs)
 
 
 class ListenerCog(BaseCog):
@@ -110,6 +115,9 @@ class DeleteCog(BaseCog):
         A method for checking if a message should or should not be deleted.
     purge_thread : None
         Removes messages from a given thread.
+    delete_message(ctx, message) : None
+        Deletes a message based on a message command.
+
 
     """
 
@@ -121,7 +129,9 @@ class DeleteCog(BaseCog):
         """
         self.bot = bot
 
-    def to_be_deleted(self, msg: discord.Message) -> bool:
+    def to_be_deleted(
+        self, msg: discord.Message, ignore_reactions: bool = True
+    ) -> bool:
         """
         Just a helper function to decide if a message was sent by this bot.
 
@@ -135,15 +145,40 @@ class DeleteCog(BaseCog):
         True if the message should be deleted, False otherwise.
 
         """
-        # delete anything done by the bot
+        if ignore_reactions:
+            # delete anything done by the bot,
+            return msg.author.id == self.bot.user.id
+
+        for reaction in msg.reactions:
+            # supposed to be a white check mark
+            if reaction.emoji == "✅":
+                return False
+
         return msg.author.id == self.bot.user.id
+
+    # could probably be replaced with a lambda
+    def to_be_deleted_alt(
+        self, msg: discord.Message, ignore_reactions: bool = False
+    ) -> bool:
+        return self.to_be_deleted(msg, False)
 
     @commands.slash_command(
         name="purge_thread",
         description="Deletes all messages from this bot in a thread.",
     )
-    async def purge_thread(self, ctx: discord.ApplicationContext):
-        await ctx.defer()
+    async def purge_thread(
+        self, ctx: Union[discord.ApplicationContext, discord.Interaction]
+    ):
+        """
+        Removes messages from a thread based on to_be_deleted.
+
+        Parameters
+        ----------
+        ctx : discord.ApplicationContext
+            The context the slash command was used in.
+        """
+        if isinstance(ctx, discord.ApplicationContext):
+            await ctx.defer()
         channel = self.bot.get_channel(ctx.channel_id)
         if (
             channel.type != discord.ChannelType.public_thread
@@ -151,13 +186,13 @@ class DeleteCog(BaseCog):
         ):
             await self.log_resp(
                 self,
-                "Sorry {}, this can only be done in a private thread.".format(
+                "Sorry {}, this can only be done in a thread.".format(
                     ctx.author.display_name
                 ),
             )
             return
 
-        await ctx.channel.purge(limit=1000, check=self.to_be_deleted)
+        await ctx.channel.purge(limit=1000, check=self.to_be_deleted_alt)
 
     @commands.message_command(
         name="Delete Message", description="Deletes the selected message."
@@ -191,6 +226,27 @@ class DeleteCog(BaseCog):
 
 
 class TextCog(BaseCog):
+    """
+    Cog for processing text.
+
+    Attributes
+    ----------
+    bot: commands.bot
+        The bot this cog will be used in.
+
+    Methods
+    -------
+    text_from_text_attachments(msg) : str
+        Returns a string based on the text attachments in a message.
+    get_good_text(thread, bot_okay) : str
+        Retrieves 'good' text from a thread.
+    get_embed_text(thread, split_field = True, bot_okay = True) : str/tuple
+        Retrieves the text from embeds.
+    drive_doc_to_raw_text(drive_doc_link) : str
+        Converts a google docs link to raw text.
+
+    """
+
     def __init__(self, bot: commands.bot):
         self.bot = bot
 
@@ -219,7 +275,7 @@ class TextCog(BaseCog):
         return return_str
 
     @staticmethod
-    async def get_good_text(thread: discord.Thread) -> str:
+    async def get_good_text(thread: discord.Thread, bot_okay: bool = False) -> str:
         """
         Retrieves 'good' text from a thread. Which includes text from text attachments, google docs, and regular message text from discord.
 
@@ -243,7 +299,7 @@ class TextCog(BaseCog):
         full_history = ""
         async for message in thread.history(limit=None, oldest_first=True):
             # don't retrieve own messages or messages marked not to be taken
-            if not message.author.bot:
+            if not message.author.bot or bot_okay:
                 # in case there's text files to read from
                 attachment_text = await TextCog.text_from_text_attachments(message)
                 # or a drive file to read from
@@ -263,12 +319,55 @@ class TextCog(BaseCog):
                             return ""
 
                 # means it wasn't just an attachment or a drive link
-                if not drive_doc_text and not drive_doc_text:
+                if not drive_doc_text and not attachment_text:
                     full_history += message.content + "\n"
 
                 full_history += attachment_text + drive_doc_text
 
         return full_history
+
+    @staticmethod
+    async def get_embed_text(
+        thread: discord.Thread, split_field: bool = True, bot_okay: bool = True
+    ):
+        """
+        Retrieves embed text from a thread.
+
+        Parameters
+        ----------
+        thread : discord.Thread
+            The thread to retrieve embed text from.
+        split_field : bool
+            Whether or not the embed text should be split into (field names, field values) upon return
+        bot_okay : bool
+            Whether or not it's okay to retrieve embed text from bots.
+
+        Returns
+        -------
+        str/tuple
+            Returns either a string or a tuple depending on whether or nor split_field is True
+        """
+        if (
+            thread.type != discord.ChannelType.public_thread
+            and thread.type != discord.ChannelType.private_thread
+        ):
+            await thread.send("Error, this must be done in a thread.")
+            return ""
+        name_text = ""
+        value_text = ""
+        combined_text = ""
+        async for message in thread.history(limit=1000):
+            if not message.author.bot or bot_okay:
+                for embed in message.embeds:
+                    for field in embed.fields:
+                        name_text += field.name
+                        value_text += field.value
+                        combined_text += field.name + field.value
+
+        if split_field:
+            return (name_text, value_text)
+
+        return combined_text
 
     @staticmethod
     def drive_doc_to_raw_text(drive_doc_link: str) -> str:
