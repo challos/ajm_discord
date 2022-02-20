@@ -59,13 +59,21 @@ class BaseCog(commands.Cog):
         try:
             return await func(string, **kwargs)
         except discord.errors.HTTPException as e:
+            print(e.code)
+            print(kwargs)
             if e.code == 40005:
-                error_string = "A file attempted to be sent was too large. Please tell your maintainer to look for file {}".format(
-                    kwargs["file"]
+                error_files = []
+                if "files" in kwargs:
+                    for file in kwargs["files"]:
+                        error_files.append(file.filename)
+                if "file" in kwargs:
+                    error_files.append(kwargs[file].filename)
+
+                error_string = "A file attempted to be sent was too large. Please tell your maintainer to look for file(s): {}".format(
+                    error_files
                 )
                 print(error_string)
                 await func(error_string)
-
 
 
 class ListenerCog(BaseCog):
