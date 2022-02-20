@@ -49,21 +49,23 @@ class BaseCog(commands.Cog):
         discord.Interaction
             Returns the Interaction object from sending the response.
         """
-        if isinstance(ctx, discord.ApplicationContext):
-            print(string)
-            try:
-                return await ctx.respond(content=string, **kwargs)
-            except discord.errors.HTTPException as e:
-                if e.code == 40005:
-                    error_string = "A file attempted to be sent was too large. Please tell your maintainer to look for file {}".format(
-                        kwargs["file"]
-                    )
-                    print(error_string)
-                    await ctx.respond(content=error_string)
+        func = None
 
+        if isinstance(ctx, discord.ApplicationContext):
+            func = ctx.respond
         if isinstance(ctx, discord.Interaction):
-            print(string)
-            return await ctx.channel.send(content=string, **kwargs)
+            func = ctx.channel.send()
+        print(string)
+        try:
+            return await func(string, **kwargs)
+        except discord.errors.HTTPException as e:
+            if e.code == 40005:
+                error_string = "A file attempted to be sent was too large. Please tell your maintainer to look for file {}".format(
+                    kwargs["file"]
+                )
+                print(error_string)
+                await func(error_string)
+
 
 
 class ListenerCog(BaseCog):
