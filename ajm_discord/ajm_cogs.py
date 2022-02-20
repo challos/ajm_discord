@@ -1,3 +1,4 @@
+from urllib.error import HTTPError
 import discord
 from typing import Union
 from discord.ext import commands
@@ -50,7 +51,16 @@ class BaseCog(commands.Cog):
         """
         if isinstance(ctx, discord.ApplicationContext):
             print(string)
-            return await ctx.respond(content=string, **kwargs)
+            try:
+                return await ctx.respond(content=string, **kwargs)
+            except discord.errors.HTTPException as e:
+                if e.code == 40005:
+                    error_string = "A file attempted to be sent was too large. Please tell your maintainer to look for file {}".format(
+                        kwargs["file"]
+                    )
+                    print(error_string)
+                    await ctx.respond(content=error_string)
+
         if isinstance(ctx, discord.Interaction):
             print(string)
             return await ctx.channel.send(content=string, **kwargs)
