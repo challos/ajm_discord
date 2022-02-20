@@ -71,6 +71,8 @@ class ListenerCog(BaseCog):
         Prints a few pieces of info when the bot is ready.
     on_command_error : None
         Method that will occur when there's an error in a command.
+    on_error : None
+        Method that will occur when there's an error with a function.
 
     """
 
@@ -87,6 +89,20 @@ class ListenerCog(BaseCog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: discord.ApplicationContext, error):
+        """
+        Method that occurs when there's an error in a command.
+
+        Parameters
+        ----------
+        ctx : discord.ApplicationContext
+            Context that the command occurred in.
+        error
+            The error that was raised.
+        """
+        self.log_resp(ctx, "THERE WAS A COMMAND ERROR: {}".format(error))
+
+    @commands.Cog.listener()
+    async def on_error(self, ctx: discord.ApplicationContext, error):
         """
         Method that occurs when there's an error in a command.
 
@@ -139,6 +155,8 @@ class DeleteCog(BaseCog):
         ----------
         msg : discord.Message
             The message to be checked for deletion.
+        ignore_reactions : bool = True
+            Whether or not the reaction should be ignored when considering messages to delete.
 
         Returns
         -------
@@ -306,6 +324,7 @@ class TextCog(BaseCog):
                 drive_doc_text = ""
 
                 if not attachment_text:
+                    # looking specifically for google drive document links
                     check = re.findall(
                         r"(https?://docs.google.com/document/d/[^\s]+)", message.content
                     )
