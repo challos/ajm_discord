@@ -54,7 +54,7 @@ class BaseCog(commands.Cog):
         if isinstance(ctx, discord.ApplicationContext):
             func = ctx.respond
         if isinstance(ctx, discord.Interaction):
-            func = ctx.channel.send()
+            func = ctx.channel.send
         print(string)
         try:
             return await func(string, **kwargs)
