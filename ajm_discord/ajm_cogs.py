@@ -442,7 +442,7 @@ class TextCog(BaseCog):
             return ""
 
         text = ""
-        with open(local_filename, "r") as fp:
+        with open(local_filename, "r", encoding="utf-8-sig") as fp:
             for line in fp:
                 text += line
 
