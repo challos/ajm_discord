@@ -8,25 +8,12 @@ import urllib
 
 
 class BaseCog(commands.Cog):
-    """
-    Intentionally sparse base class.
-
-    Attributes
-    ----------
-    bot : commands.bot
-        The bot the cog will be used in.
-
-    Methods
-    -------
-    log_resp : discord.Interaction
-        Prints and sends a response.
-    """
-
     def __init__(self, bot: commands.bot):
         """
-        Parameters
-        ----------
-        bot : commands.bot
+        Initializer.
+
+        Args:
+            bot (commands.bot): The Discord bot to be used for this cog.
         """
         self.bot = bot
 
@@ -36,21 +23,20 @@ class BaseCog(commands.Cog):
         string: str,
         **kwargs,
     ) -> discord.Interaction:
-        """Prints and sends a response.
-        ctx : discord.ApplicationContext
-            The context that should be responded to.
-        string : str
-            The string to be printed and used for the response.
-        **kwargs:
-            Any kwargs which will be directly forwarded to ctx.respond.
+        """
+        Logs a given string in both discord and the command line.
 
-        Returns
-        -------
-        discord.Interaction
-            Returns the Interaction object from sending the response.
+        Args:
+            ctx (Union[discord.Interaction, discord.ApplicationContext]): ctx to post the message to
+            string (str): string to be both printed to stdout and sent through discord
+            **kwargs: args to be passed to
+
+        Returns:
+            discord.Interaction: the ctx's interaction after being responded or sent to.
         """
         func = None
 
+        # there's probably more cases that need to be handled but these are two of the major ones
         if isinstance(ctx, discord.ApplicationContext):
             func = ctx.respond
         if isinstance(ctx, discord.Interaction):
@@ -77,32 +63,19 @@ class BaseCog(commands.Cog):
 
 
 class ListenerCog(BaseCog):
-    """
-    A cog that contains basic listeners.
-
-    Attributes
-    ----------
-    bot : commands.bot
-        The bot the cog will be used in.
-
-    Methods
-    -------
-    on_ready : None
-        Prints a few pieces of info when the bot is ready.
-    on_command_error : None
-        Method that will occur when there's an error in a command.
-    on_error : None
-        Method that will occur when there's an error with a function.
-
-    """
-
     def __init__(self, bot: commands.Bot):
+        """
+        Initializer function.
+
+        Args:
+            bot (commands.Bot): the bot to use for this cog
+        """
         self.bot = bot
 
     @commands.Cog.listener()
     async def on_ready(self):
         """
-        Method that prints out when the bot is ready for use.
+        Prints that the bot is ready, and what guilds are selected to use for the bot.
         """
         print("Bot {} is ready.".format(self.bot.user))
         print("Debug guilds", self.bot.debug_guilds)
@@ -110,58 +83,33 @@ class ListenerCog(BaseCog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx: discord.ApplicationContext, error):
         """
-        Method that occurs when there's an error in a command.
+        Listener for when there was an error with a command, though I've never seen it trigger.
 
-        Parameters
-        ----------
-        ctx : discord.ApplicationContext
-            Context that the command occurred in.
-        error
-            The error that was raised.
+        Args:
+            ctx (discord.ApplicationContext): context for the command that errored.
+            error (_type_): the error of the command.
         """
         self.log_resp(ctx, "THERE WAS A COMMAND ERROR: {}".format(error))
 
     @commands.Cog.listener()
     async def on_error(self, ctx: discord.ApplicationContext, error):
         """
-        Method that occurs when there's an error in a command.
+        Listener for when there's an error.
 
-        Parameters
-        ----------
-        ctx : discord.ApplicationContext
-            Context that the command occurred in.
-        error
-            The error that was raised.
+        Args:
+            ctx (discord.ApplicationContext): context for the error
+            error (_type_): the error given
         """
         self.log_resp(ctx, "THERE WAS AN ERROR: {}".format(error))
 
 
 class DeleteCog(BaseCog):
-    """
-    A cog that things related to delete commands.
-
-    Attributes
-    ----------
-    bot : commands.bot
-        The bot the cog will be used in.
-
-    Methods
-    -------
-    to_be_deleted : bool
-        A method for checking if a message should or should not be deleted.
-    purge_thread : None
-        Removes messages from a given thread.
-    delete_message(ctx, message) : None
-        Deletes a message based on a message command.
-
-
-    """
-
     def __init__(self, bot: commands.bot):
         """
-        Parameters
-        ----------
-        bot : commands.bot
+        Initalizer function.
+
+        Args:
+            bot (commands.bot): the bot to be used for this cog
         """
         self.bot = bot
 
@@ -169,19 +117,14 @@ class DeleteCog(BaseCog):
         self, msg: discord.Message, ignore_reactions: bool = True
     ) -> bool:
         """
-        Just a helper function to decide if a message was sent by this bot.
+        Function for deciding what messages should be deleted.
 
-        Parameters
-        ----------
-        msg : discord.Message
-            The message to be checked for deletion.
-        ignore_reactions : bool = True
-            Whether or not the reaction should be ignored when considering messages to delete.
+        Args:
+            msg (discord.Message): the message to be checked.
+            ignore_reactions (bool, optional): Whether or not reactions on the messages should be ignored. Defaults to True.
 
-        Returns
-        -------
-        True if the message should be deleted, False otherwise.
-
+        Returns:
+            bool: whether or not the message is cleated for deletion.
         """
         if ignore_reactions:
             # delete anything done by the bot,
@@ -198,6 +141,16 @@ class DeleteCog(BaseCog):
     def to_be_deleted_alt(
         self, msg: discord.Message, ignore_reactions: bool = False
     ) -> bool:
+        """
+        Alternate version of the to_be_deleted function, and could probably be replaced.
+
+        Args:
+            msg (discord.Message): the message to be checked.
+            ignore_reactions (bool, optional): Whether or not reactions on the messages should be ignored. Defaults to False.
+
+        Returns:
+            bool: whether or not the message is cleated for deletion.
+        """
         return self.to_be_deleted(msg, False)
 
     @commands.slash_command(
@@ -208,13 +161,12 @@ class DeleteCog(BaseCog):
         self, ctx: Union[discord.ApplicationContext, discord.Interaction]
     ):
         """
-        Removes messages from a thread based on to_be_deleted.
+        Removes all (or at least most messages) from a bot in this thread.
 
-        Parameters
-        ----------
-        ctx : discord.ApplicationContext
-            The context the slash command was used in.
+        Args:
+            ctx (Union[discord.ApplicationContext, discord.Interaction]): the context this command was called in
         """
+        # so that it doesn't time out and complain
         if isinstance(ctx, discord.ApplicationContext):
             await ctx.defer()
         channel = self.bot.get_channel(ctx.channel_id)
@@ -239,14 +191,11 @@ class DeleteCog(BaseCog):
         self, ctx: discord.ApplicationContext, message: discord.Message
     ):
         """
-        Deletes a given message that the user chooses in the App dropdown.
+        Deletes a given message.
 
-        Parameters
-        ----------
-        ctx : discord.ApplicationContext
-            The context for the command.
-        message : discord.Message
-            The message to be deleted.
+        Args:
+            ctx (discord.ApplicationContext): the context this command was used in
+            message (discord.Message): the message to be deleted
         """
         await ctx.defer()
         if self.to_be_deleted(message):
@@ -264,44 +213,19 @@ class DeleteCog(BaseCog):
 
 
 class TextCog(BaseCog):
-    """
-    Cog for processing text.
-
-    Attributes
-    ----------
-    bot: commands.bot
-        The bot this cog will be used in.
-
-    Methods
-    -------
-    text_from_text_attachments(msg) : str
-        Returns a string based on the text attachments in a message.
-    get_good_text(thread, bot_okay) : str
-        Retrieves 'good' text from a thread.
-    get_embed_text(thread, split_field = True, bot_okay = True) : str/tuple
-        Retrieves the text from embeds.
-    drive_doc_to_raw_text(drive_doc_link) : str
-        Converts a google docs link to raw text.
-
-    """
-
     def __init__(self, bot: commands.bot):
         self.bot = bot
 
     @staticmethod
     async def text_from_text_attachments(msg: discord.Message) -> str:
         """
-        Retrieves the text from text attachments on a given discord message.
+        Retrieves the text from the attachments of a given discord message.
 
-        Parameters
-        ----------
-        msg : discord.Message
-            The message to retrieve text from attachments from.
+        Args:
+            msg (discord.Message): the message that should have its attachments searched for text
 
-        Returns
-        -------
-        str
-            The text from attachments.
+        Returns:
+            str: the text found in the attachments
         """
         return_str = ""
         for attachment in msg.attachments:
@@ -315,17 +239,14 @@ class TextCog(BaseCog):
     @staticmethod
     async def get_good_text(thread: discord.Thread, bot_okay: bool = False) -> str:
         """
-        Retrieves 'good' text from a thread. Which includes text from text attachments, google docs, and regular message text from discord.
+        Retrieves 'good' text from a given thread. Which is text only from users, unless bot_okay is True.
 
-        Parameters
-        ----------
-        thread : discord.Thread
-            The thread to retieve good text from.
+        Args:
+            thread (discord.Thread): the thread to retrieve text from
+            bot_okay (bool, optional): whether or not bot messages in the thread should also be used. Defaults to False.
 
-        Returns
-        -------
-        str
-            All the text from the thread.
+        Returns:
+            str: all of the text found in the thread
         """
         if (
             thread.type != discord.ChannelType.public_thread
@@ -368,23 +289,17 @@ class TextCog(BaseCog):
     @staticmethod
     async def get_embed_text(
         thread: discord.Thread, split_field: bool = True, bot_okay: bool = True
-    ):
+    ) -> Union[(str, str), str]:
         """
-        Retrieves embed text from a thread.
+        Retrieves text from embeds in a thread.
 
-        Parameters
-        ----------
-        thread : discord.Thread
-            The thread to retrieve embed text from.
-        split_field : bool
-            Whether or not the embed text should be split into (field names, field values) upon return
-        bot_okay : bool
-            Whether or not it's okay to retrieve embed text from bots.
+        Args:
+            thread (discord.Thread): the thread to retrieve embed text from.
+            split_field (bool, optional): whether or not to split the returned embed text upon return into (name, value). Defaults to True.
+            bot_okay (bool, optional): whether or not bot embeds should be read. Defaults to True.
 
-        Returns
-        -------
-        str/tuple
-            Returns either a string or a tuple depending on whether or nor split_field is True
+        Returns:
+            Union((str, str), str): returns either a tuple of two strings with the first field being the text from embed names and the second being the text from embed values, or a string of the embed unsplit.
         """
         if (
             thread.type != discord.ChannelType.public_thread
@@ -411,17 +326,13 @@ class TextCog(BaseCog):
     @staticmethod
     def drive_doc_to_raw_text(drive_doc_link: str) -> str:
         """
-        Converts a drive link to raw text from the drive document and returns it.
+        Converts a drive document link to text.
 
-        Parameters
-        ----------
-        drive_doc_link : str
-            The link to the google drive document.
+        Args:
+            drive_doc_link (str): the drive document link.
 
-        Returns
-        -------
-        str
-            The raw text of the google drive document.
+        Returns:
+            str: the text from the drive document.
         """
         doc_pattern = re.compile(r"/document/d/([^/\n]*)")
         key = doc_pattern.findall(drive_doc_link)
