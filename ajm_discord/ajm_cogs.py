@@ -1,3 +1,4 @@
+from io import StringIO
 from urllib.error import HTTPError
 import discord
 from typing import Union
@@ -5,7 +6,8 @@ from discord.ext import commands
 from discord.commands import Option
 import re
 import urllib
-
+from docx import Document
+import io
 
 class BaseCog(commands.Cog):
     def __init__(self, bot: commands.bot):
@@ -182,7 +184,7 @@ class DeleteCog(BaseCog):
             )
             return
 
-        await ctx.channel.purge(limit=1000, check=self.to_be_deleted_alt)
+        await channel.purge(limit=1000, check=self.to_be_deleted_alt)
 
     @commands.message_command(
         name="Delete Message", description="Deletes the selected message."
@@ -235,6 +237,33 @@ class TextCog(BaseCog):
                 return_str = raw.decode()
 
         return return_str
+    
+    @staticmethod
+    async def text_from_word_attachments(msg: discord.Message) -> str:
+        """
+        Retrieves the text from the attachments of a given discord message.
+
+        Args:
+            msg (discord.Message): the message that should have its .docx attachments searched for text
+
+        Returns:
+            str: _description_
+        """
+        return_str = ""
+        for attachment in msg.attachments:
+            #check MIME type
+            if "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in attachment.content_type:
+                bytes = await attachment.read()
+                reader = io.BytesIO(bytes)
+                raw = reader
+                document = Document(raw)
+                for paragraph in document.paragraphs:
+                    return_str += paragraph.text + '\n'
+        
+        return return_str
+
+
+
 
     @staticmethod
     async def get_good_text(thread: discord.Thread, bot_okay: bool = False) -> str:
@@ -260,7 +289,9 @@ class TextCog(BaseCog):
             # don't retrieve own messages or messages marked not to be taken
             if not message.author.bot or bot_okay:
                 # in case there's text files to read from
-                attachment_text = await TextCog.text_from_text_attachments(message)
+                attachment_text = ""
+                attachment_text += await TextCog.text_from_text_attachments(message)
+                attachment_text += await TextCog.text_from_word_attachments(message)
                 # or a drive file to read from
                 drive_doc_text = ""
 
@@ -289,7 +320,7 @@ class TextCog(BaseCog):
     @staticmethod
     async def get_embed_text(
         thread: discord.Thread, split_field: bool = True, bot_okay: bool = True
-    ) -> Union[(str, str), str]:
+    ):
         """
         Retrieves text from embeds in a thread.
 
