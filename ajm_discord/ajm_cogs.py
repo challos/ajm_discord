@@ -9,13 +9,16 @@ import urllib
 from docx import Document
 import io
 
+
 class BaseCog(commands.Cog):
     def __init__(self, bot: commands.bot):
         """
-        Initializer.
+        Cog containing only essentials like logging.
 
-        Args:
-            bot (commands.bot): The Discord bot to be used for this cog.
+        Parameters
+        ----------
+        bot : commands.bot
+            The bot this cog should be used in.
         """
         self.bot = bot
 
@@ -26,19 +29,25 @@ class BaseCog(commands.Cog):
         **kwargs,
     ) -> discord.Interaction:
         """
-        Logs a given string in both discord and the command line.
+        Logs responses both to stdout and to the user.
 
-        Args:
-            ctx (Union[discord.Interaction, discord.ApplicationContext]): ctx to post the message to
-            string (str): string to be both printed to stdout and sent through discord
-            **kwargs: args to be passed to
+        Parameters
+        ----------
+        ctx : Union[discord.Interaction, discord.ApplicationContext]
+            The context that log response was used in, could be for either a message
+            command, or potentially on a button, etc.
+        string : str
+            The string that should be output to both stdout and the user.
 
-        Returns:
-            discord.Interaction: the ctx's interaction after being responded or sent to.
+        Returns
+        -------
+        discord.Interaction
+            The interaction created from this, assuming nothing went wrong.
         """
         func = None
 
-        # there's probably more cases that need to be handled but these are two of the major ones
+        # there's probably more cases that need to be handled but these are two of the
+        # major ones
         if isinstance(ctx, discord.ApplicationContext):
             func = ctx.respond
         if isinstance(ctx, discord.Interaction):
@@ -57,8 +66,9 @@ class BaseCog(commands.Cog):
                 if "file" in kwargs:
                     error_files.append(kwargs[file].filename)
 
-                error_string = "A file attempted to be sent was too large. Please tell your maintainer to look for file(s): {}".format(
-                    error_files
+                error_string = (
+                    "A file attempted to be sent was too large. Please tell your"
+                    " maintainer to look for file(s): {}".format(error_files)
                 )
                 print(error_string)
                 await func(error_string)
@@ -67,10 +77,13 @@ class BaseCog(commands.Cog):
 class ListenerCog(BaseCog):
     def __init__(self, bot: commands.Bot):
         """
-        Initializer function.
+        Contains some basic listeners, although some of them don't quite work for
+        whatever reason.
 
-        Args:
-            bot (commands.Bot): the bot to use for this cog
+        Parameters
+        ----------
+        bot : commands.Bot
+            The bot this cog should be used in.
         """
         self.bot = bot
 
@@ -82,36 +95,44 @@ class ListenerCog(BaseCog):
         print("Bot {} is ready.".format(self.bot.user))
         print("Debug guilds", self.bot.debug_guilds)
 
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx: discord.ApplicationContext, error):
-        """
-        Listener for when there was an error with a command, though I've never seen it trigger.
+    # unfortunately, these don't seem to work for whatever reason, so they're commented
+    # out for the time being
 
-        Args:
-            ctx (discord.ApplicationContext): context for the command that errored.
-            error (_type_): the error of the command.
-        """
-        self.log_resp(ctx, "THERE WAS A COMMAND ERROR: {}".format(error))
+    # @commands.Cog.listener()
+    # async def on_command_error(self, ctx: discord.ApplicationContext, error):
+    #     """
+    #     _summary_
 
-    @commands.Cog.listener()
-    async def on_error(self, ctx: discord.ApplicationContext, error):
-        """
-        Listener for when there's an error.
+    #     Parameters
+    #     ----------
+    #     ctx : discord.ApplicationContext
+    #         _description_
+    #     error : _type_
+    #         _description_
+    #     """
+    #     self.log_resp(ctx, "THERE WAS A COMMAND ERROR: {}".format(error))
 
-        Args:
-            ctx (discord.ApplicationContext): context for the error
-            error (_type_): the error given
-        """
-        self.log_resp(ctx, "THERE WAS AN ERROR: {}".format(error))
+    # @commands.Cog.listener()
+    # async def on_error(self, ctx: discord.ApplicationContext, error):
+    #     """
+    #     Listener for when there's an error.
+
+    #     Args:
+    #         ctx (discord.ApplicationContext): context for the error
+    #         error (_type_): the error given
+    #     """
+    #     self.log_resp(ctx, "THERE WAS AN ERROR: {}".format(error))
 
 
 class DeleteCog(BaseCog):
     def __init__(self, bot: commands.bot):
         """
-        Initalizer function.
+        Contains basic delete methods.
 
-        Args:
-            bot (commands.bot): the bot to be used for this cog
+        Parameters
+        ----------
+        bot : commands.bot
+            The bot this cog should be used in.
         """
         self.bot = bot
 
@@ -119,14 +140,20 @@ class DeleteCog(BaseCog):
         self, msg: discord.Message, ignore_reactions: bool = True
     ) -> bool:
         """
-        Function for deciding what messages should be deleted.
+        A function for checking whether or not a message should be deleted
 
-        Args:
-            msg (discord.Message): the message to be checked.
-            ignore_reactions (bool, optional): Whether or not reactions on the messages should be ignored. Defaults to True.
+        Parameters
+        ----------
+        msg : discord.Message
+            The message to be checked
+        ignore_reactions : bool, optional
+            Whether or not reactions should be ignored, as they can allow certain
+            messages that would otherwise would be deleted to stay, by default True
 
-        Returns:
-            bool: whether or not the message is cleated for deletion.
+        Returns
+        -------
+        bool
+            Returns true if the message should be deleted, and false otherwise
         """
         if ignore_reactions:
             # delete anything done by the bot,
@@ -144,14 +171,19 @@ class DeleteCog(BaseCog):
         self, msg: discord.Message, ignore_reactions: bool = False
     ) -> bool:
         """
-        Alternate version of the to_be_deleted function, and could probably be replaced.
+        Alternate version of to_be_deleted, could probably be replaced with a lambda.
+        Parameters
+        ----------
+        msg : discord.Message
+            The message to be checked
+        ignore_reactions : bool, optional
+            Whether or not reactions should be ignored, as they can allow certain
+            messages that would otherwise would be deleted to stay, by default True
 
-        Args:
-            msg (discord.Message): the message to be checked.
-            ignore_reactions (bool, optional): Whether or not reactions on the messages should be ignored. Defaults to False.
-
-        Returns:
-            bool: whether or not the message is cleated for deletion.
+        Returns
+        -------
+        bool
+            Returns true if the message should be deleted, and false otherwise
         """
         return self.to_be_deleted(msg, False)
 
@@ -163,10 +195,12 @@ class DeleteCog(BaseCog):
         self, ctx: Union[discord.ApplicationContext, discord.Interaction]
     ):
         """
-        Removes all (or at least most messages) from a bot in this thread.
+        Purges the thread this command was run in.
 
-        Args:
-            ctx (Union[discord.ApplicationContext, discord.Interaction]): the context this command was called in
+        Parameters
+        ----------
+        ctx : Union[discord.ApplicationContext, discord.Interaction]
+            The context this thread was run in
         """
         # so that it doesn't time out and complain
         if isinstance(ctx, discord.ApplicationContext):
@@ -193,11 +227,14 @@ class DeleteCog(BaseCog):
         self, ctx: discord.ApplicationContext, message: discord.Message
     ):
         """
-        Deletes a given message.
+        Deletes a given message
 
-        Args:
-            ctx (discord.ApplicationContext): the context this command was used in
-            message (discord.Message): the message to be deleted
+        Parameters
+        ----------
+        ctx : discord.ApplicationContext
+            The context of that delete message was used in.
+        message : discord.Message
+            The message to delete.
         """
         await ctx.defer()
         if self.to_be_deleted(message):
@@ -221,13 +258,17 @@ class TextCog(BaseCog):
     @staticmethod
     async def text_from_text_attachments(msg: discord.Message) -> str:
         """
-        Retrieves the text from the attachments of a given discord message.
+        Gathers text from plain text attachments (.txts).
 
-        Args:
-            msg (discord.Message): the message that should have its attachments searched for text
+        Parameters
+        ----------
+        msg : discord.Message
+            The message to look for plain text attachments in.
 
-        Returns:
-            str: the text found in the attachments
+        Returns
+        -------
+        str
+            All text gathered from any plain text attachments in the message.
         """
         return_str = ""
         for attachment in msg.attachments:
@@ -237,45 +278,54 @@ class TextCog(BaseCog):
                 return_str = raw.decode()
 
         return return_str
-    
+
     @staticmethod
     async def text_from_word_attachments(msg: discord.Message) -> str:
         """
-        Retrieves the text from the attachments of a given discord message.
+        Gathers text from word attachments (.docxs).
 
-        Args:
-            msg (discord.Message): the message that should have its .docx attachments searched for text
+        Parameters
+        ----------
+        msg : discord.Message
+            The message to look for word document attachments in.
 
-        Returns:
-            str: _description_
+        Returns
+        -------
+        str
+            All text gathered from any word document attachments in the message.
         """
         return_str = ""
         for attachment in msg.attachments:
-            #check MIME type
-            if "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in attachment.content_type:
+            # check MIME type
+            if (
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                in attachment.content_type
+            ):
                 bytes = await attachment.read()
                 reader = io.BytesIO(bytes)
                 raw = reader
                 document = Document(raw)
                 for paragraph in document.paragraphs:
-                    return_str += paragraph.text + '\n'
-        
+                    return_str += paragraph.text + "\n"
+
         return return_str
-
-
-
 
     @staticmethod
     async def get_good_text(thread: discord.Thread, bot_okay: bool = False) -> str:
         """
-        Retrieves 'good' text from a given thread. Which is text only from users, unless bot_okay is True.
+        Retrieves the 'good' text from a thread, classified as any text inside the thread, which includes messages (usually not sent by the bot), attachments, and links.
 
-        Args:
-            thread (discord.Thread): the thread to retrieve text from
-            bot_okay (bool, optional): whether or not bot messages in the thread should also be used. Defaults to False.
+        Parameters
+        ----------
+        thread : discord.Thread
+            _description_
+        bot_okay : bool, optional
+            _description_, by default False
 
-        Returns:
-            str: all of the text found in the thread
+        Returns
+        -------
+        str
+            _description_
         """
         if (
             thread.type != discord.ChannelType.public_thread
@@ -305,7 +355,9 @@ class TextCog(BaseCog):
                         # means that there was a drive doc with nothing in it
                         if drive_doc_text == "":
                             await thread.send(
-                                "Permissions on drive link denied, please check your sharing settings. Could also be an empty drive document."
+                                "Permissions on drive link denied, please check your"
+                                " sharing settings. Could also be an empty drive"
+                                " document."
                             )
                             return ""
 
