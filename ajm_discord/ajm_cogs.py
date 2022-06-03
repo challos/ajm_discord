@@ -1,9 +1,6 @@
-from io import StringIO
-from urllib.error import HTTPError
 import discord
 from typing import Union
 from discord.ext import commands
-from discord.commands import Option
 import re
 import urllib
 from docx import Document
@@ -22,6 +19,7 @@ class BaseCog(commands.Cog):
         """
         self.bot = bot
 
+    @classmethod
     async def log_resp(
         self,
         ctx: Union[discord.Interaction, discord.ApplicationContext],
@@ -311,9 +309,23 @@ class TextCog(BaseCog):
         return return_str
 
     @staticmethod
-    async def get_good_text(thread: discord.Thread, bot_okay: bool = False) -> str:
+    async def text_from_image_attachments(msg: discord.Message) -> str:
+        return_str = ""
+        for attachment in msg.attachments:
+            # check MIME type
+            if attachment.content_type in ["image/jpeg", "image/jpg", "image/png"]:
+                return_str += "![]({})".format(attachment.url)
+
+        return return_str
+
+    @staticmethod
+    async def get_good_text(
+        thread: discord.Thread, bot_okay: bool = False, images_to_markdown: bool = False
+    ) -> str:
         """
-        Retrieves the 'good' text from a thread, classified as any text inside the thread, which includes messages (usually not sent by the bot), attachments, and links.
+        Retrieves the 'good' text from a thread, classified as any text inside the
+        thread, which includes messages (usually not sent by the bot), attachments, and
+        links.
 
         Parameters
         ----------
@@ -342,6 +354,10 @@ class TextCog(BaseCog):
                 attachment_text = ""
                 attachment_text += await TextCog.text_from_text_attachments(message)
                 attachment_text += await TextCog.text_from_word_attachments(message)
+                if images_to_markdown:
+                    attachment_text += await TextCog.text_from_image_attachments(
+                        message
+                    )
                 # or a drive file to read from
                 drive_doc_text = ""
 
