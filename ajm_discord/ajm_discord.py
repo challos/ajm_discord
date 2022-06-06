@@ -93,35 +93,6 @@ class ListenerCog(BaseCog):
         print("Bot {} is ready.".format(self.bot.user))
         print("Debug guilds", self.bot.debug_guilds)
 
-    # unfortunately, these don't seem to work for whatever reason, so they're commented
-    # out for the time being
-
-    # @commands.Cog.listener()
-    # async def on_command_error(self, ctx: discord.ApplicationContext, error):
-    #     """
-    #     _summary_
-
-    #     Parameters
-    #     ----------
-    #     ctx : discord.ApplicationContext
-    #         _description_
-    #     error : _type_
-    #         _description_
-    #     """
-    #     self.log_resp(ctx, "THERE WAS A COMMAND ERROR: {}".format(error))
-
-    # @commands.Cog.listener()
-    # async def on_error(self, ctx: discord.ApplicationContext, error):
-    #     """
-    #     Listener for when there's an error.
-
-    #     Args:
-    #         ctx (discord.ApplicationContext): context for the error
-    #         error (_type_): the error given
-    #     """
-    #     self.log_resp(ctx, "THERE WAS AN ERROR: {}".format(error))
-
-
 class DeleteCog(BaseCog):
     def __init__(self, bot: commands.bot):
         """
@@ -251,6 +222,14 @@ class DeleteCog(BaseCog):
 
 class TextCog(BaseCog):
     def __init__(self, bot: commands.bot):
+        """
+        Initializes the TextCog.
+
+        Parameters
+        ----------
+        bot : commands.bot
+            The bot this cog should be used in.
+        """
         self.bot = bot
 
     @staticmethod
@@ -310,6 +289,20 @@ class TextCog(BaseCog):
 
     @staticmethod
     async def text_from_image_attachments(msg: discord.Message) -> str:
+        """
+        Converts image links to markdown text. Does not to OCR on images or anything of
+        the sort.
+
+        Parameters
+        ----------
+        msg : discord.Message
+            The message to be checked for image attachments.
+
+        Returns
+        -------
+        str
+            A string of concatenated attachment urls in markdown form.
+        """
         return_str = ""
         for attachment in msg.attachments:
             # check MIME type
