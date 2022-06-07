@@ -3,7 +3,7 @@ from setuptools import setup
 with open("README.md", encoding="utf-8") as f:
     long_description = f.read()
 
-version = "1.0"
+version = "1.0.2"
 
 setup(
     name="ajm_discord",
@@ -11,6 +11,7 @@ setup(
     py_modules=["ajm_discord"],
     author="Andrew McGrail",
     author_email="andrewjerrismcgrail@gmail.com",
+    url="https://github.com/challos/ajm_discord",
     license="MIT License (MIT)",
     description="Some useful discord cog/bots.",
     long_description=long_description,
