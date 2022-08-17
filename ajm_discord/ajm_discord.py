@@ -93,6 +93,7 @@ class ListenerCog(BaseCog):
         print("Bot {} is ready.".format(self.bot.user))
         print("Debug guilds", self.bot.debug_guilds)
 
+
 class DeleteCog(BaseCog):
     def __init__(self, bot: commands.bot):
         """
@@ -290,7 +291,7 @@ class TextCog(BaseCog):
     @staticmethod
     async def text_from_image_attachments(msg: discord.Message) -> str:
         """
-        Converts image links to markdown text. Does not to OCR on images or anything of
+        Converts image links to markdown text. Does not do OCR on images or anything of
         the sort.
 
         Parameters
@@ -323,14 +324,16 @@ class TextCog(BaseCog):
         Parameters
         ----------
         thread : discord.Thread
-            _description_
+            The thread to retrieve text from
         bot_okay : bool, optional
-            _description_, by default False
+            Whether or not bot messages should be counted as text, by default False
+        images_to_markdown : bool, optional
+            Whether or not image links should be converted to markdown style text
 
         Returns
         -------
         str
-            _description_
+            The 'good' text from the thread.
         """
         if (
             thread.type != discord.ChannelType.public_thread
@@ -338,6 +341,8 @@ class TextCog(BaseCog):
         ):
             await thread.send("Error, this must be done in a thread.")
             return ""
+
+        docs_pattern = re.compile(r"(https?://docs.google.com/document/d/[^\s]+)")
 
         full_history = ""
         async for message in thread.history(limit=None, oldest_first=True):
@@ -354,27 +359,25 @@ class TextCog(BaseCog):
                 # or a drive file to read from
                 drive_doc_text = ""
 
-                if not attachment_text:
-                    # looking specifically for google drive document links
-                    check = re.findall(
-                        r"(https?://docs.google.com/document/d/[^\s]+)", message.content
-                    )
-                    for link in check:
-                        drive_doc_text += TextCog.drive_doc_to_raw_text(link)
-                        # means that there was a drive doc with nothing in it
-                        if drive_doc_text == "":
-                            await thread.send(
-                                "Permissions on drive link denied, please check your"
-                                " sharing settings. Could also be an empty drive"
-                                " document."
-                            )
-                            return ""
+                # looking specifically for google drive document links
+                check = docs_pattern.findall(message.content)
+                for link in check:
+                    drive_doc_text += TextCog.drive_doc_to_raw_text(link)
+                    # means that there was a drive doc with nothing in it
+                    if drive_doc_text == "":
+                        await thread.send(
+                            "Permissions on drive link denied, please check your"
+                            " sharing settings. Could also be an empty drive"
+                            " document."
+                        )
+                        return ""
 
-                # means it wasn't just an attachment or a drive link
-                if not drive_doc_text and not attachment_text:
-                    full_history += message.content + "\n"
+                full_history += (
+                    message.content + "\n" + attachment_text + "\n" + drive_doc_text
+                )
 
-                full_history += attachment_text + drive_doc_text
+        # remove all drive links, other links can stay if they exist
+        full_history = docs_pattern.sub("", full_history)
 
         return full_history
 
@@ -385,13 +388,22 @@ class TextCog(BaseCog):
         """
         Retrieves text from embeds in a thread.
 
-        Args:
-            thread (discord.Thread): the thread to retrieve embed text from.
-            split_field (bool, optional): whether or not to split the returned embed text upon return into (name, value). Defaults to True.
-            bot_okay (bool, optional): whether or not bot embeds should be read. Defaults to True.
+        Parameters
+        ----------
+        thread : discord.Thread
+            The thread to retrieve embed text from
+        split_field : bool, optional
+            Whether or not to split the returned embed text return into (name, value),
+            by default True
+        bot_okay : bool, optional
+            Whether or not bot embeds should be read, by default True
 
-        Returns:
-            Union((str, str), str): returns either a tuple of two strings with the first field being the text from embed names and the second being the text from embed values, or a string of the embed unsplit.
+        Returns
+        -------
+        Union((str, str), str)
+            Returns either a tuple of two strings with the first field being the text
+            from embed names and the second being the text from embed values, or a
+            string of the embed unsplit.
         """
         if (
             thread.type != discord.ChannelType.public_thread
@@ -418,13 +430,17 @@ class TextCog(BaseCog):
     @staticmethod
     def drive_doc_to_raw_text(drive_doc_link: str) -> str:
         """
-        Converts a drive document link to text.
+        Converts a drive document link to raw text.
 
-        Args:
-            drive_doc_link (str): the drive document link.
+        Parameters
+        ----------
+        drive_doc_link : str
+            The link for the drive document
 
-        Returns:
-            str: the text from the drive document.
+        Returns
+        -------
+        str
+            The text from the drive document
         """
         doc_pattern = re.compile(r"/document/d/([^/\n]*)")
         key = doc_pattern.findall(drive_doc_link)

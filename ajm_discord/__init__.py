@@ -1,1 +1,1 @@
-from ajm_discord.ajm_discord import BaseCog, DeleteCog, TextCog, ListenerCog
+from .ajm_discord import BaseCog, DeleteCog, TextCog, ListenerCog

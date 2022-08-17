@@ -3,7 +3,7 @@ from setuptools import setup
 with open("README.md", encoding="utf-8") as f:
     long_description = f.read()
 
-version = "1.0.2"
+version = "1.0.2.5"
 
 setup(
     name="ajm_discord",
