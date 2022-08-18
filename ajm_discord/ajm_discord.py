@@ -461,8 +461,13 @@ class TextCog(BaseCog):
             return ""
 
         text = ""
+
         with open(local_filename, "r", encoding="utf-8-sig") as fp:
             for line in fp:
                 text += line
+
+        # truthfully this shouldn't be necessary but google does something weird
+        remove_double_lines_pattern = re.compile(r"(\n\n)")
+        text = remove_double_lines_pattern.sub("\n", text)
 
         return text
